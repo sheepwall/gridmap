@@ -1,5 +1,5 @@
-from setuptools import setup
+from setuptools import setup, findpackages
 setup(name='gridmap',
       version='1.0',
-      py_modules=['gridmap'],
+      packages=find_packages(),
       )
