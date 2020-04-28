@@ -2,6 +2,8 @@ import noise
 from matplotlib import pyplot as plt
 import numpy as np
 
+import timeit
+
 class Gridmap:
     def __init__(
         self,
@@ -24,6 +26,12 @@ class Gridmap:
 
         self.og = occupancy_grid
 
+        self.bm = {
+            "value_at": 0,
+            "value_at_i": 0,
+            "clear_view": 0
+        }
+
     def plot(self, plot_axes=None):
         if plot_axes is None:
             fig = plt.figure()
@@ -41,11 +49,12 @@ class Gridmap:
         )
 
     def value_at(self, position):
-        hits = np.where(position[0] > self.xaxis)[0]
-        i = max(hits)
+        tt0 = timeit.default_timer()
+        i = ((position[:,0] - self.xaxis[0])/self.xres).astype(int)
+        j = ((position[:,1] - self.yaxis[0])/self.yres).astype(int)
 
-        hits = np.where(position[1] > self.yaxis)[0]
-        j = max(hits)
+        self.bm["value_at"] += timeit.default_timer() - tt0
+        self.bm["value_at_i"] += 1
 
         return self.og[i,j]
 
@@ -74,19 +83,16 @@ class Gridmap:
         yintersects = self.yaxis[(self.yaxis > ymin) & (self.yaxis < ymax)]
         yintersects = np.c_[invline(yintersects), yintersects]
 
-
-        for p in xintersects:
+        if xintersects.size > 0:
             dx = np.array([self.xres / 2, 0])
-            square_r = self.value_at(p + dx)
-            square_l = self.value_at(p - dx)
-            if square_r == 1 or square_l == 1:
+            squares = np.r_[xintersects + dx, xintersects - dx]
+            if self.value_at(squares).astype(bool).any():
                 return False
 
-        for p in yintersects:
+        if yintersects.size > 0:
             dy = np.array([0, self.yres / 2])
-            square_u = self.value_at(p + dy)
-            square_d = self.value_at(p - dy)
-            if square_u == 1 or square_d == 1:
+            squares = np.r_[yintersects + dy, yintersects - dy]
+            if self.value_at(squares).astype(bool).any():
                 return False
 
         return True
@@ -162,7 +168,8 @@ if __name__ == '__main__':
     p1 = 100 * np.random.rand(2) - 50
     p2 = 100 * np.random.rand(2) - 50
 
+    tt = timeit.default_timer()
     clr = gm.clear_view(p1, p2)
-    print(clr)
+    print(timeit.default_timer() - tt)
 
     plt.show()
